@@ -84,6 +84,11 @@ function details_url_callback($post){
         <?php $processor = get_post_meta( $post->ID, 'laptop_processor_value', true ) ?>
         <input type="text" id="processor" value="<?php echo $processor; ?>" name="laptop_processor" placeholder="i3/i5/i7/i7">
     </p>
+    <p>
+        <label for="processor">Processor Generation</label>
+        <?php $processor_gen = get_post_meta( $post->ID, 'processor_gen_value', true ) ?>
+        <input type="text" id="processor_gen" value="<?php echo $processor_gen; ?>" name="processor_gen" placeholder="e.g 10th, 11th">
+    </p>
     <?php
 }
 
@@ -92,10 +97,61 @@ function save_detail_values( $post_id, $post ){
 
     $laptop_details = isset($_POST['laptop_details']) ? $_POST['laptop_details'] : '';
     $laptop_processor = isset($_POST['laptop_processor']) ? $_POST['laptop_processor'] : '';
+    $processor_gen = isset($_POST['processor_gen']) ? $_POST['processor_gen'] : '';
 
     update_post_meta( $post_id, 'laptop_details_value', $laptop_details );
     update_post_meta( $post_id, 'laptop_processor_value', $laptop_processor );
+    update_post_meta( $post_id, 'processor_gen_value', $processor_gen );
 
 }
 
 add_action( 'save_post', 'save_detail_values', 10, 2 );
+
+
+// custom column, 
+/**
+ * https://developer.wordpress.org/reference/hooks/manage_post_type_posts_columns/
+ * https://developer.wordpress.org/reference/hooks/manage_post-post_type_posts_custom_column/
+ */
+
+function laptop_custom_columns($columns){
+
+    $columns = array(
+        'cb'         => '<input type="checkbox">',
+        'title'      => 'Laptop Model',
+        'processor'  => 'Processor',
+        'generation' => 'Generation',
+        'date'       => 'Date',
+    );
+
+    return $columns;
+
+}
+add_action( 'manage_laptop_posts_columns', 'laptop_custom_columns' );
+
+
+function laptop_custom_columns_data( $column, $post_id ){
+
+    switch( $column ){
+        
+        case 'processor':
+            $lp_processor = get_post_meta( $post_id, 'laptop_processor_value', true );
+            echo $lp_processor;
+            break;
+        case 'generation':
+            $lp_generation = get_post_meta( $post_id, 'processor_gen_value', true );
+            echo $lp_generation;
+            break;
+
+    }
+
+}
+
+add_action( 'manage_laptop_posts_custom_column', 'laptop_custom_columns_data', 10, 2 );
+
+function laptop_sortable_custom_columns( $columns ) {
+    $columns['processor'] = 'processor';
+    $columns['generation'] = 'generation';
+    return $columns;
+}
+add_filter( 'manage_edit-laptop_sortable_columns', 'laptop_sortable_custom_columns' );
