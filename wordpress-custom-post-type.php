@@ -201,3 +201,40 @@ function save_author_value( $post_id, $post ){
 }
 
 add_action( 'save_post', 'save_author_value', 10, 2 );
+
+function author_filter_box(){
+
+    global $typenow;
+    if( $typenow == 'laptop' ){
+
+        $author_id = isset($_GET['by_author']) ? intval($_GET['by_author']) : '';
+        wp_dropdown_users( array(
+            'show_option_none' => 'Select Author',
+            'role'             => 'author',
+            'name'             => 'by_author',
+            'id'               => 'author_filter_id',
+            'selected'         => $author_id,
+        ) );
+    }
+
+}
+
+add_action( 'restrict_manage_posts', 'author_filter_box' );
+
+function filter_by_author( $query ){
+
+    global $typenow;
+    global $pagenow;
+
+    $author_id = isset($_GET['by_author']) ? intval($_GET['by_author']) : '';
+
+    if( $typenow == 'laptop' && $pagenow == 'edit.php' && !empty($author_id) ){
+
+        $query->query_vars['meta_key'] = 'laptop_author_value';
+        $query->query_vars['meta_value'] = $author_id;
+
+    }
+
+}
+
+add_action( 'parse_query', 'filter_by_author' );
