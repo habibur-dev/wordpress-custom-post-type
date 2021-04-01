@@ -52,7 +52,7 @@
         'has_archive'        => true,
         'hierarchical'       => false,
         'menu_position'      => 10,
-        'menu_icon'             => 'dashicons-laptop',
+        'menu_icon'          => 'dashicons-laptop',
         'supports'           => array( 'title', 'editor', 'author', 'thumbnail' ),
         'taxonomies'         => array( 'category', 'post_tag' ),
     );
@@ -66,7 +66,8 @@ add_action( 'init', 'wpcpt_laptop_init' );
 //Register custom Meta Box
 function wpcpt_metabox_register(){
 
-    add_meta_box( 'meta_box_id', 'Details URL', 'details_url_callback', 'laptop', 'side', 'high' );
+    add_meta_box( 'meta_box_id', 'Laptop Details', 'details_url_callback', 'laptop', 'side', 'high' );
+    add_meta_box( 'author_box_id', 'Choose Author', 'choose_author_callback', 'laptop', 'side', 'high' );
 
 }
 
@@ -91,6 +92,7 @@ function details_url_callback($post){
     </p>
     <?php
 }
+
 
 //save meta data
 function save_detail_values( $post_id, $post ){
@@ -147,6 +149,8 @@ function laptop_custom_columns_data( $column, $post_id ){
 
 }
 
+
+// Custom columns make sortable
 add_action( 'manage_laptop_posts_custom_column', 'laptop_custom_columns_data', 10, 2 );
 
 function laptop_sortable_custom_columns( $columns ) {
@@ -155,3 +159,45 @@ function laptop_sortable_custom_columns( $columns ) {
     return $columns;
 }
 add_filter( 'manage_edit-laptop_sortable_columns', 'laptop_sortable_custom_columns' );
+
+function choose_author_callback($post){
+    ?>
+    <div>
+        <label>Select Author</label>
+        <select name="laptop_author">
+            <?php 
+
+            $authors = get_users( 
+                array(
+                    'role' => 'author'
+                ));
+
+            $saved_author = get_post_meta( $post->ID, 'laptop_author_value', true );
+
+            foreach( $authors as $index => $author ){
+                $selected = '';
+                if( $saved_author == $author->ID ){
+                    $selected = 'selected="selected"';
+                }
+
+            ?>
+            <option value="<?php echo $author->ID; ?>" <?php echo $selected; ?>><?php echo $author->display_name; ?></option>
+            <?php
+            }
+            ?>
+            
+        </select>
+    </div>
+    <?php
+}
+
+
+function save_author_value( $post_id, $post ){
+
+    $lp_author_id = isset( $_REQUEST['laptop_author'] ) ? intval( $_REQUEST['laptop_author'] ) : '';
+
+    update_post_meta( $post_id, 'laptop_author_value', $lp_author_id );
+
+}
+
+add_action( 'save_post', 'save_author_value', 10, 2 );
