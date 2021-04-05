@@ -83,7 +83,7 @@ function details_url_callback($post){
     <p>
         <label for="processor">Processor</label>
         <?php $processor = get_post_meta( $post->ID, 'laptop_processor_value', true ) ?>
-        <input type="text" id="processor" value="<?php echo $processor; ?>" name="laptop_processor" placeholder="i3/i5/i7/i7">
+        <input type="text" id="processor" value="<?php echo $processor; ?>" name="laptop_processor" placeholder="i3/i5/i7/i9">
     </p>
     <p>
         <label for="processor">Processor Generation</label>
@@ -123,6 +123,7 @@ function laptop_custom_columns($columns){
         'title'      => 'Laptop Model',
         'processor'  => 'Processor',
         'generation' => 'Generation',
+        'brand'      => 'Brand',
         'date'       => 'Date',
     );
 
@@ -131,7 +132,7 @@ function laptop_custom_columns($columns){
 }
 add_action( 'manage_laptop_posts_columns', 'laptop_custom_columns' );
 
-
+// column data show
 function laptop_custom_columns_data( $column, $post_id ){
 
     switch( $column ){
@@ -144,7 +145,11 @@ function laptop_custom_columns_data( $column, $post_id ){
             $lp_generation = get_post_meta( $post_id, 'processor_gen_value', true );
             echo $lp_generation;
             break;
-
+        case 'brand':
+            foreach ( get_the_terms( get_the_ID(), 'brand' ) as $tax ) {
+                echo __( $tax->name );
+            }
+            break;
     }
 
 }
@@ -156,9 +161,13 @@ add_action( 'manage_laptop_posts_custom_column', 'laptop_custom_columns_data', 1
 function laptop_sortable_custom_columns( $columns ) {
     $columns['processor'] = 'processor';
     $columns['generation'] = 'generation';
+    $columns['brand'] = 'brand';
     return $columns;
 }
 add_filter( 'manage_edit-laptop_sortable_columns', 'laptop_sortable_custom_columns' );
+
+
+// Choose author metabox
 
 function choose_author_callback($post){
     ?>
@@ -192,6 +201,7 @@ function choose_author_callback($post){
 }
 
 
+// save author value
 function save_author_value( $post_id, $post ){
 
     $lp_author_id = isset( $_REQUEST['laptop_author'] ) ? intval( $_REQUEST['laptop_author'] ) : '';
@@ -201,6 +211,9 @@ function save_author_value( $post_id, $post ){
 }
 
 add_action( 'save_post', 'save_author_value', 10, 2 );
+
+
+// Author Filter
 
 function author_filter_box(){
 
@@ -218,8 +231,9 @@ function author_filter_box(){
     }
 
 }
-
 add_action( 'restrict_manage_posts', 'author_filter_box' );
+
+// value show filter by author
 
 function filter_by_author( $query ){
 
@@ -236,5 +250,80 @@ function filter_by_author( $query ){
     }
 
 }
-
 add_action( 'parse_query', 'filter_by_author' );
+
+
+// Register texonomy
+
+function laptop_brand_texonomy() {
+    $labels = array(
+        'name'              => _x( 'Brands', 'taxonomy general name' ),
+        'singular_name'     => _x( 'Brand', 'taxonomy singular name' ),
+        'search_items'      => __( 'Search Brand' ),
+        'all_items'         => __( 'All Brands' ),
+        'parent_item'       => __( 'Parent Brand' ),
+        'parent_item_colon' => __( 'Parent Brand:' ),
+        'edit_item'         => __( 'Edit Brand' ),
+        'update_item'       => __( 'Update Brand' ),
+        'add_new_item'      => __( 'Add New Brand' ),
+        'new_item_name'     => __( 'New Brand Name' ),
+        'menu_name'         => __( 'Brands' ),
+    );
+    $args   = array(
+        'hierarchical'      => true, // make it hierarchical (like categories)
+        'labels'            => $labels,
+        'show_ui'           => true,
+        'show_admin_column' => true,
+        'query_var'         => true,
+        'rewrite'           => [ 'slug' => 'brand' ],
+    );
+    register_taxonomy( 'brand', 'laptop', $args );
+}
+add_action( 'init', 'laptop_brand_texonomy' );
+
+
+// Filter by brand
+add_action( 'restrict_manage_posts', 'brand_filter_box' );
+function brand_filter_box(){
+
+    global $typenow;
+    $show_texonomy = 'brand';
+
+    if( $typenow == 'laptop' ){
+
+        $selected_brand = isset($_GET[$show_texonomy]) ? intval($_GET[$show_texonomy]) : '';
+        wp_dropdown_categories( array(
+            'show_option_all' => 'All Brand',
+            'name'            => $show_texonomy,
+            'taxonomy'        => $show_texonomy,
+            'show_count'      => true,
+            'selected'        => $selected_brand,
+        ) );
+    }
+
+}
+
+
+
+// show filter values
+add_action( 'parse_query', 'filter_by_brand' );
+function filter_by_brand($query){
+
+    global $typenow;
+    global $pagenow;
+    $post_type = 'laptop';
+    $taxonomy  = 'brand';
+
+    $query_variables = &$query->query_vars;
+    
+    if ($typenow == $post_type && $pagenow == "edit.php" && isset($query_variables[$taxonomy]) && is_numeric($query_variables[$taxonomy])) {
+
+        $term_details = get_term_by("id", $query_variables[$taxonomy], $taxonomy);
+
+        $query_variables[$taxonomy] = $term_details->slug;
+    }
+
+}
+
+
+
