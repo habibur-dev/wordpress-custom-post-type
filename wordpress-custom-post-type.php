@@ -54,7 +54,6 @@
         'menu_position'      => 10,
         'menu_icon'          => 'dashicons-laptop',
         'supports'           => array( 'title', 'editor', 'author', 'thumbnail' ),
-        'taxonomies'         => array( 'category', 'post_tag' ),
     );
  
     register_post_type( 'laptop', $args );
@@ -275,7 +274,6 @@ function laptop_brand_texonomy() {
         'show_ui'           => true,
         'show_admin_column' => true,
         'query_var'         => true,
-        'rewrite'           => [ 'slug' => 'brand' ],
     );
     register_taxonomy( 'brand', 'laptop', $args );
 }
@@ -283,47 +281,35 @@ add_action( 'init', 'laptop_brand_texonomy' );
 
 
 // Filter by brand
-add_action( 'restrict_manage_posts', 'brand_filter_box' );
-function brand_filter_box(){
-
-    global $typenow;
-    $show_texonomy = 'brand';
-
-    if( $typenow == 'laptop' ){
-
-        $selected_brand = isset($_GET[$show_texonomy]) ? intval($_GET[$show_texonomy]) : '';
-        wp_dropdown_categories( array(
-            'show_option_all' => 'All Brand',
-            'name'            => $show_texonomy,
-            'taxonomy'        => $show_texonomy,
-            'show_count'      => true,
-            'selected'        => $selected_brand,
-        ) );
-    }
-
+add_action('restrict_manage_posts', 'brand_filter');
+function brand_filter() {
+	global $typenow;
+	$post_type = 'laptop';
+	$taxonomy  = 'brand';
+	if ($typenow == $post_type) {
+		$selected      = isset($_GET[$taxonomy]) ? $_GET[$taxonomy] : '';
+		$info_taxonomy = get_taxonomy($taxonomy);
+		wp_dropdown_categories(array(
+			'show_option_all' => sprintf( __( 'Show all %s', 'wpcpt' ), $info_taxonomy->label ),
+			'taxonomy'        => $taxonomy,
+			'name'            => $taxonomy,
+			'orderby'         => 'name',
+			'selected'        => $selected,
+			'show_count'      => true,
+			'hide_empty'      => false,
+            'value_field'     => 'slug',
+		));
+	};
 }
 
-
-
-// show filter values
-add_action( 'parse_query', 'filter_by_brand' );
-function filter_by_brand($query){
-
-    global $typenow;
-    global $pagenow;
-    $post_type = 'laptop';
-    $taxonomy  = 'brand';
-
-    $query_variables = &$query->query_vars;
-    
-    if ($typenow == $post_type && $pagenow == "edit.php" && isset($query_variables[$taxonomy]) && is_numeric($query_variables[$taxonomy])) {
-
-        $term_details = get_term_by("id", $query_variables[$taxonomy], $taxonomy);
-
-        $query_variables[$taxonomy] = $term_details->slug;
-    }
-
+add_filter('parse_query', 'filter_data');
+function filter_data($query) {
+	global $pagenow;
+	$post_type = 'laptop'; 
+	$taxonomy  = 'brand'; 
+	$q_vars    = &$query->query_vars;
+	if ( $pagenow == 'edit.php' && isset($q_vars['post_type']) && $q_vars['post_type'] == $post_type && isset($q_vars[$taxonomy]) && is_numeric($q_vars[$taxonomy]) && $q_vars[$taxonomy] != 0 ) {
+		$term = get_term_by('id', $q_vars[$taxonomy], $taxonomy);
+		$q_vars[$taxonomy] = $term->slug;
+	}
 }
-
-
-
